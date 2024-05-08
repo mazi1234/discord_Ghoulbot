@@ -7,10 +7,10 @@ from discord.ext import commands
 load_dotenv()
 #declare constant values
 DEFAULT_TEXT_CHANNEL_NAME = 'join_notifications'
-MIN_NUM_USERS = 2
+MIN_NUM_USERS = 1
 MAX_NUM_USERS = 6
 DEFAULT_PHRASE = 'GHOOLS'
-DEFAULT_SLOWMODE_DELAY = 5
+DEFAULT_SLOWMODE_DELAY = 300
 LAST_SENT_TIMESTAMP = 0
 TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.all() #need this to get correct info on users.
@@ -43,13 +43,13 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
     Returns:
         None
     """
-    if before.channel is not None and after.channel is None:
-        try:
-            guild = client.get_channel(before.channel.id).guild
-            textChannel = discord.utils.get(guild.text_channels, name="szechuan-sauce")
-        except Exception as e:
-            print(f'Error getting kick log information: {e}')
-        await print_imposter(guild, textChannel)
+    # if before.channel is not None and after.channel is None:
+    #     try:
+    #         guild = client.get_channel(before.channel.id).guild
+    #         textChannel = discord.utils.get(guild.text_channels, name="szechuan-sauce")
+    #     except Exception as e:
+    #         print(f'Error getting kick log information: {e}')
+    #     await print_imposter(guild, textChannel)
     #optimization idea later change from voice state update to only join vc state update (so it doesn't )   
     if before.channel is not after.channel and after.channel is not None: #check if somebody joins any vc
         vc_id = after.channel.id
@@ -171,10 +171,32 @@ async def send_notif_to_fallback_text_channel(guild: discord.Guild, curr_vc: dis
         print(f'Failed to send the notification to all text channel. Error {e}. Quitting now')
         textChannel = None
     return textChannel
+def verifySlowMode() -> bool:
+    """_summary_
 
+    Returns:
+        bool: _description_
+    """
+    if LAST_SENT_TIMESTAMP == 0:
+        return True
+    #timestamp must be positive
+    now = datetime.now()
+    try:
+        previous = datetime.fromisoformat(LAST_SENT_TIMESTAMP)
+    except:
+        raise ValueError(f'Error: Invalid timestamp. Last sent timestamp: {LAST_SENT_TIMESTAMP} contains an invalid value')
+    if previous > now:
+        raise(f'Error: Invalid date. last sent message date: {previous} is after current date: {now}')
+    timed = (now - previous).seconds
+    if (now - previous).seconds >= DEFAULT_SLOWMODE_DELAY:
+        print(f'This message is sent too soon. Current time: {now}, last sent message: {previous}. Current text_cooldown (slowmode_delay) is set to: {DEFAULT_SLOWMODE_DELAY}.')
+        return False
+    
 async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: discord.VoiceChannel, curr_users: list):
+    global LAST_SENT_TIMESTAMP
     """_summary_
         uses discord API to send a notifcation to send a notification to textChannel asking @everyone to join
+        
     Args:
         textChannel (discord.TextChannel): the text channel where the notification will be sent to (assumes is the same as the one where the enough users joined the voice channels)
         voiceChannel (discord.VoiceChannel): the voice channel object that has enough users
@@ -183,14 +205,8 @@ async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: 
         None
     """
     try:
-        now = datetime.now()
-        previous = datetime.date.fromisoformat(LAST_SENT_TIMESTAMP)
-        if previous > now:
-            raise(f'Last sent timestamp invalid. Value: {previous} is after current date: {now}')
-        if (now - previous).seconds <= DEFAULT_SLOWMODE_DELAY:
-            raise(f'Please refrain from spamming. ')
-            textChannel.slowmode_delay = DEFAULT_SLOWMODE_DELAY
-            print(f'adding slowmode delay to {textChannel.name}. Setting to {DEFAULT_SLOWMODE_DELAY}')
+        if not verifySlowMode(): #don't send the message if cannot verify the message is valid to send and is
+            return
         print("\n".join([u for u in curr_users]))
         newlineChar = '\n- ' #can't just keep this literally in an f string but using a variable works.
         await textChannel.send(f"{len(curr_users)} {DEFAULT_PHRASE} have joined {voiceChannel.name}:\n- {newlineChar.join([u for u in curr_users])}")
