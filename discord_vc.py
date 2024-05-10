@@ -8,6 +8,7 @@ load_dotenv()
 #declare constant values
 intents = discord.Intents.all() #need this to get correct info on users.
 client = discord.Client(intents=intents)
+#this is STAGING
 @client.event
 async def on_ready():
     """_summary_
