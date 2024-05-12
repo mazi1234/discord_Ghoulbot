@@ -1,0 +1,9 @@
+{
+    "DEFAULT_TEXT_CHANNEL_NAME": "join_notifications",
+    "MIN_NUM_USERS": 1,
+    "MAX_NUM_USERS": 6,
+    "DEFAULT_GREETING": "Hello",
+    "DEFAULT_SLOWMODE_DELAY": 300,
+    "LAST_SENT_TIMESTAMP": "2024-05-12T14:21:34.116378",
+    "command_prefix": "/"
+}

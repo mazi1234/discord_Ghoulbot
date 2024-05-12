@@ -2,7 +2,8 @@ import discord
 from datetime import datetime
 from discord.ext import commands
 from dotenv import load_dotenv
-from settings import Environs
+from config import SettingConfig, configDict as config
+from env_vars import TOKEN
 #get the environment variables
 load_dotenv()
 #declare constant values
@@ -55,7 +56,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
             presentUsers.append(myUser.display_name)
         # presentUsers = [myUser.name for myUser in curr_vc.members]
         print(f'Successfully found the voice channel {curr_vc}.\n\tMembers present:{presentUsers}')
-        if len(curr_vc.members) >= Environs.MIN_NUM_USERS: #find the channel, if not possible create the channel, if not possible use implemented fall-back
+        if len(curr_vc.members) >= config.get("MIN_NUM_USERS"): #find the channel, if not possible create the channel, if not possible use implemented fall-back
             print(f'Sending an invite to all server members to join {curr_vc.name}...')
             guild = curr_vc.guild
             textChannel = await send_notif_to_correct_channel(guild, curr_vc, presentUsers)
@@ -80,11 +81,11 @@ async def send_notif_to_correct_channel(guild: discord.Guild, curr_vc: discord.V
         discord.TextChannel: the textChannel object (if present); None otherwise
     """
     try: #checks if the default notif channel is present
-        textChannel = discord.utils.get(guild.text_channels, name=Environs.DEFAULT_TEXT_CHANNEL_NAME)
-        print(f'Successfully found the: \'{Environs.DEFAULT_TEXT_CHANNEL_NAME}\' channel')
+        textChannel = discord.utils.get(guild.text_channels, name=config.get("DEFAULT_TEXT_CHANNEL_NAME"))
+        print(f'Successfully found the: \'{config.get("DEFAULT_TEXT_CHANNEL_NAME")}\' channel')
         await send_notif_to_channel(textChannel, curr_vc, presentUsers)
     except Exception as e:#if default notif channel not present checks if it can create it
-        print(f'Could not find the text channel: {Environs.DEFAULT_TEXT_CHANNEL_NAME}. Error: {e}')
+        print(f'Could not find the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
         textChannel = None
     return textChannel
     
@@ -108,13 +109,13 @@ async def create_and_send_to_notif_channel(guild: discord.Guild, curr_vc: discor
     """ 
     try:  
         textChannel = await guild.create_text_channel(
-            name=Environs.DEFAULT_TEXT_CHANNEL_NAME, 
+            name=config.get("DEFAULT_TEXT_CHANNEL_NAME"), 
             position=0,
             news=True,
-            reason=f'To send a notification offline users when {Environs.MIN_NUM_USERS} join the same voice channel.')
-        print(f'Successfully created text channel: {Environs.DEFAULT_TEXT_CHANNEL_NAME}')
+            reason=f'To send a notification offline users when {config.get("MIN_NUM_USERS")} join the same voice channel.')
+        print(f'Successfully created text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}')
     except Exception as e:
-        print(f'Could not create the text channel: {Environs.DEFAULT_TEXT_CHANNEL_NAME}. Error: {e}')
+        print(f'Could not create the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
     try:
         #await textChannel.set_permissions(client.user, discord.Permissions.text)
         # view_channel=True,
@@ -136,7 +137,7 @@ async def create_and_send_to_notif_channel(guild: discord.Guild, curr_vc: discor
         print(f'\tSuccessfully given bot @everyone and text permissions.\n\tServer owner has all permissions.\n\teveryone else only has view permissions.')
         await send_notif_to_channel(textChannel, curr_vc, presentUsers)
     except Exception as e: 
-        print(f'Could not create the text channel: {Environs.DEFAULT_TEXT_CHANNEL_NAME}. Error: {e}')
+        print(f'Could not create the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
         textChannel = None
     return textChannel
   
@@ -173,19 +174,19 @@ def verifySlowMode() -> bool:
     Returns:
         bool: whether the request to send valid or not
     """
-    if Environs.LAST_SENT_TIMESTAMP == 0:
+    if config.get("LAST_SENT_TIMESTAMP") == 0:
         return True
     #timestamp must be positive
     now = datetime.now()
     try:
-        previous = datetime.fromisoformat(Environs.LAST_SENT_TIMESTAMP)
+        previous = datetime.fromisoformat(config.get("LAST_SENT_TIMESTAMP"))
     except:
-        raise ValueError(f'Error: Invalid timestamp. Last sent timestamp: {Environs.LAST_SENT_TIMESTAMP} contains an invalid value')
+        raise ValueError(f'Error: Invalid timestamp. Last sent timestamp: {config.get("LAST_SENT_TIMESTAMP")} contains an invalid value')
     if previous > now:
         raise(f'Error: Invalid date. last sent message date: {previous} is after current date: {now}')
     timed = (now - previous).seconds
-    if (now - previous).seconds >= Environs.DEFAULT_SLOWMODE_DELAY:
-        print(f'This message is sent too soon. Current time: {now}, last sent message: {previous}. Current text_cooldown (slowmode_delay) is set to: {Environs.DEFAULT_SLOWMODE_DELAY}.')
+    if (now - previous).seconds >= config.get("DEFAULT_SLOWMODE_DELAY"):
+        print(f'This message is sent too soon. Current time: {now}, last sent message: {previous}. Current text_cooldown (slowmode_delay) is set to: {config.get("DEFAULT_SLOWMODE_DELAY")}.')
         return False
     
 async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: discord.VoiceChannel, curr_users: list):
@@ -204,8 +205,8 @@ async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: 
             return
         print("\n".join([u for u in curr_users]))
         newlineChar = '\n- ' #can't just keep this literally in an f string but using a variable works.
-        await textChannel.send(f"{len(curr_users)} {Environs.DEFAULT_GREETING} have joined {voiceChannel.name}:\n- {newlineChar.join([u for u in curr_users])}")
-        Environs.LAST_SENT_TIMESTAMP = datetime.now().isoformat()
+        await textChannel.send(f"{len(curr_users)} {config.get('DEFAULT_GREETING')} have joined {voiceChannel.name}:\n- {newlineChar.join([u for u in curr_users])}")
+        SettingConfig.set("LAST_SENT_TIMESTAMP", (datetime.now().isoformat()))
         print(f'Succefully sent the notification to {textChannel.name}')
     except Exception as e:
         print(f'Error: Failed to send the notification to text channel {textChannel.name}. Error message: {e}')
@@ -220,4 +221,5 @@ async def print_imposter(guild: discord.guild, textChannel: discord.TextChannel)
         print(f'{entry.user} {entry.action} {entry.target}')
 #CODE EXECUTION STARTS HERE!!!!
 # client.run(Environs.TOKEN)
-bot.run(Environs.TOKEN)
+
+bot.run(TOKEN)

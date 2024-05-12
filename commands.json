@@ -1,0 +1,10 @@
+{
+    "set_min_users": "MIN_NUM_USERS",
+    "set_max_users" : "MAX_NUM_USERS",
+    "set_greeting" : "DEFAULT_GREETING",
+    "set_slowmode_delay" : "DEFAULT_SLOWMODE_DELAY",
+    "manual_cmd" : "man",
+    "help_cmd" : "help",
+    "set_command_prefix" : "command_prefix",
+    "set_text_channel_name" : "DEFAULT_TEXT_CHANNEL_NAME"
+}

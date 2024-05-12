@@ -1,28 +1,24 @@
 import discord
-from settings import get_env, set_env, get_int_env
-from settings import Environs
-from dotenv import load_dotenv
+from config import MyConfig, cmdList
 from discord.ext import commands
-from enum import Enum
-load_dotenv()
+from env_vars import TOKEN
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=get_env(Environs.command_prefix), intents=intents)
-class Commands(Enum):
-    set_min_users = 'set_min_users'
-    set_max_users = 'set_max_users'
-    set_greeting = 'set_greeting'
-    set_slowmode_delay = 'set_slowmode_delay'
-    manual_cmd = 'man'
-    help_cmd = 'help'
-    set_command_prefix = 'set_command_prefix'
-    set_text_channel_name = 'set_text_channel_name'
-@bot.command(name=Commands.set_min_users)
+cmd_prefix = MyConfig.get("command_prefix", "!")
+bot = commands.Bot(command_prefix=cmd_prefix, intents=intents)
+#set_ varname val
+@bot.command
+def commandHandler(cmdList):
+    print(type(cmdList))
+    for key, val in cmdList:
+        if key.startswith("set"):
+            print("setter")
+            configVarName = val
+            MyConfig.set(configVarName, )
+
+@bot.command(name=cmdList.get("set_min_users"))
 async def change_min_users(ctx, arg=None):
     handleMissingArg(ctx, arg)
-    assert(isinstance(arg, str))
-    print(f' first {get_env(Environs.MIN_NUM_USERS)}')
-    set_env(Environs.MIN_NUM_USERS, arg)
-    print(f'LAST {get_env(Environs.MIN_NUM_USERS)}')
+    config.set_env()
 @bot.event
 async def on_ready():
     """_summary_
@@ -35,4 +31,4 @@ async def on_ready():
 async def handleMissingArg(ctx, arg):
     if arg == None: 
         return await ctx.send(f'Missing argument. Use {Environs.command_prefix}{Commands.set_min_users} to print the manual to')
-bot.run(get_env(Environs.TOKEN))
+bot.run(TOKEN)
