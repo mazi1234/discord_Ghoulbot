@@ -1,11 +1,9 @@
 import discord
 from datetime import datetime
 from discord.ext import commands
-from dotenv import load_dotenv
 from config import SettingConfig, configDict as config
 from env_vars import TOKEN
 #get the environment variables
-load_dotenv()
 #declare constant values
 intents = discord.Intents.all() #need this to get correct info on users.
 # client = discord.Client(intents=intents)
@@ -185,9 +183,11 @@ def verifySlowMode() -> bool:
     if previous > now:
         raise(f'Error: Invalid date. last sent message date: {previous} is after current date: {now}')
     timed = (now - previous).seconds
-    if (now - previous).seconds >= config.get("DEFAULT_SLOWMODE_DELAY"):
+    if (now - previous).seconds <= config.get("DEFAULT_SLOWMODE_DELAY"):
         print(f'This message is sent too soon. Current time: {now}, last sent message: {previous}. Current text_cooldown (slowmode_delay) is set to: {config.get("DEFAULT_SLOWMODE_DELAY")}.')
         return False
+    else:
+        return True
     
 async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: discord.VoiceChannel, curr_users: list):
     """_summary_

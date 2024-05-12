@@ -1,5 +1,7 @@
 import os
 import logging
+from dotenv import load_dotenv
+load_dotenv()
 logger = logging.getLogger("discord_bot_logger")
 def getEnvVar(varname: str):
     """_summary_
