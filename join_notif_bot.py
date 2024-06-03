@@ -1,13 +1,18 @@
 import discord
 from datetime import datetime
 from discord.ext import commands
-from config import SettingConfig, configDict as config
+from config import SettingConfig, configDict as config, cmdList as cmds
 from env_vars import TOKEN
+import logging
+from commandHandler import myCmds as cmdCog
 #get the environment variables
 #declare constant values
 intents = discord.Intents.all() #need this to get correct info on users.
-# client = discord.Client(intents=intents)
-bot = commands.Bot(command_prefix='!', intents=intents)
+cmd_prefix = cmds.get("command_prefix", "!")
+bot = commands.Bot(command_prefix=cmd_prefix, intents=intents, 
+                   help_command=commands.MinimalHelpCommand())
+logger = logging.getLogger("discord_bot_logger")
+logging.basicConfig(filename='JoinNotif.log', encoding='utf-8', level=logging.DEBUG)
 #this is STAGING
 @bot.event
 async def on_ready():
@@ -16,8 +21,10 @@ async def on_ready():
     Returns:
         None
     """
-    print(f'{bot.user} has connected to Discord!')
-    print(bot.guilds)
+    logger.info(f'Success! {bot.user} has connected to Discord!')
+    bot.add_cog(cmdCog(bot, logger))
+    cmdsCog = bot.get_cog('myCmds')
+    logger.info(f'Successfully Added the commandsCog')
 @bot.command()
 async def handleCommands(ctx, arg):
     pass
@@ -38,24 +45,16 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
     Returns:
         None
     """
-    # if before.channel is not None and after.channel is None:
-    #     try:
-    #         guild = client.get_channel(before.channel.id).guild
-    #         textChannel = discord.utils.get(guild.text_channels, name="szechuan-sauce")
-    #     except Exception as e:
-    #         print(f'Error getting kick log information: {e}')
-    #     await print_imposter(guild, textChannel)
-    #optimization idea later change from voice state update to only join vc state update (so it doesn't )   
-    if before.channel is not after.channel and after.channel is not None: #check if somebody joins any vc
+    if before.channel is not after.channel and after.channel is not None: #check if somebody joins a new vc
         vc_id = after.channel.id
         curr_vc = bot.get_channel(vc_id)
         presentUsers = []
         for myUser in curr_vc.members:
             presentUsers.append(myUser.display_name)
         # presentUsers = [myUser.name for myUser in curr_vc.members]
-        print(f'Successfully found the voice channel {curr_vc}.\n\tMembers present:{presentUsers}')
+        logger.info(f'Successfully found the voice channel {curr_vc}.\n\tMembers present:{presentUsers}')
         if len(curr_vc.members) >= config.get("MIN_NUM_USERS"): #find the channel, if not possible create the channel, if not possible use implemented fall-back
-            print(f'Sending an invite to all server members to join {curr_vc.name}...')
+            logger.info(f'Sending an invite to all server members to join {curr_vc.name}...')
             guild = curr_vc.guild
             textChannel = await send_notif_to_correct_channel(guild, curr_vc, presentUsers)
             if textChannel is None:#couldn't find the default channel. Try to create it
@@ -63,9 +62,8 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
                 if textChannel is None:#couldn't create the default channel, use fallback option
                     textChannel = await send_notif_to_fallback_text_channel(guild, curr_vc, presentUsers)
                     if textChannel is None:
-                        print(f'Failed to send notification. Quitting silently...')
-                #what to do if fallback option fails? Silently throw error
-        print('\t\t\tFINISHED')
+                        logger.error(f'Failed to send notification. Quitting silently...')
+                #what to do if fallback option fails? Silently throw error?
 async def send_notif_to_correct_channel(guild: discord.Guild, curr_vc: discord.VoiceChannel, presentUsers: list)-> discord.TextChannel: 
     """_summary_
     attempts to find a text channel in the current guild with the name given by DEFAULT_TEXT_CHANNEL_NAME. 
@@ -80,10 +78,10 @@ async def send_notif_to_correct_channel(guild: discord.Guild, curr_vc: discord.V
     """
     try: #checks if the default notif channel is present
         textChannel = discord.utils.get(guild.text_channels, name=config.get("DEFAULT_TEXT_CHANNEL_NAME"))
-        print(f'Successfully found the: \'{config.get("DEFAULT_TEXT_CHANNEL_NAME")}\' channel')
+        logger.info(f'Successfully found the: \'{config.get("DEFAULT_TEXT_CHANNEL_NAME")}\' channel')
         await send_notif_to_channel(textChannel, curr_vc, presentUsers)
     except Exception as e:#if default notif channel not present checks if it can create it
-        print(f'Could not find the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
+        logger.error(f'Could not find the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
         textChannel = None
     return textChannel
     
@@ -111,31 +109,15 @@ async def create_and_send_to_notif_channel(guild: discord.Guild, curr_vc: discor
             position=0,
             news=True,
             reason=f'To send a notification offline users when {config.get("MIN_NUM_USERS")} join the same voice channel.')
-        print(f'Successfully created text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}')
+        logger.info(f'Successfully created text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}')
     except Exception as e:
-        print(f'Could not create the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
+        logger.error(f'Could not create the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
     try:
-        #await textChannel.set_permissions(client.user, discord.Permissions.text)
-        # view_channel=True,
-        #     manage_channels=False,
-        #     manage_permissions=True,
-        #     manage_webhooks=False,
-        #     create_instant_invite=False,
-        #     send_messages=True,
-        #     embed_links=False,
-        #     attach_files=False,
-        #     use_external_emoji=False,
-        #     mention_everyone=True,
-        #     manage_messages=True,
-        #     read_message_history=True,
-        #     send_tts_messages=True,
-        #     use_application_commands=True
-       # await textChannel.set_permissions(guild.owner, discord.Permissions.all)
         await textChannel.set_permissions(guild.default_role, view_channel=True, send_messages=False)
-        print(f'\tSuccessfully given bot @everyone and text permissions.\n\tServer owner has all permissions.\n\teveryone else only has view permissions.')
+        logger.info(f'\tSuccessfully given bot @everyone and text permissions.\n\tServer owner has all permissions.\n\teveryone else only has view permissions.')
         await send_notif_to_channel(textChannel, curr_vc, presentUsers)
     except Exception as e: 
-        print(f'Could not create the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
+        logger.error(f'Could not create the text channel: {config.get("DEFAULT_TEXT_CHANNEL_NAME")}. Error: {e}')
         textChannel = None
     return textChannel
   
@@ -152,18 +134,18 @@ async def send_notif_to_fallback_text_channel(guild: discord.Guild, curr_vc: dis
         discord.TextChannel: the textChannel object (if present); None otherwise
     """  
     try:#text to first channel if possible
-        print(f'Trying to send the notification to any text channel it can')
+        logger.info(f'Trying to send the notification to any text channel it can')
         for channel in guild.text_channels:
             #check if channel permission allows the bot to text to the channel
             try:
                 textChannel = channel
-                print(f'Successfully found a suitable text channel to send the notification in: {textChannel.name}')
+                logger.info(f'Successfully found a suitable text channel to send the notification in: {textChannel.name}')
                 await send_notif_to_channel(textChannel, curr_vc, presentUsers)
                 break
             except Exception as e:
-                print(f'Failed to send the notification to {textChannel.name} text channel because error: {e}. Moving on to find a suitable textChannel')
+                logger.warning(f'Failed to send the notification to {textChannel.name} text channel because error: {e}. Moving on to find a suitable textChannel')
     except Exception as e:
-        print(f'Failed to send the notification to all text channel. Error {e}. Quitting now')
+        logger.warning(f'Failed to send the notification to all text channel. Error {e}. Quitting now')
         textChannel = None
     return textChannel
 def verifySlowMode() -> bool:
@@ -181,10 +163,10 @@ def verifySlowMode() -> bool:
     except:
         raise ValueError(f'Error: Invalid timestamp. Last sent timestamp: {config.get("LAST_SENT_TIMESTAMP")} contains an invalid value')
     if previous > now:
-        raise(f'Error: Invalid date. last sent message date: {previous} is after current date: {now}')
+        raise Exception(f'Error: Invalid date. last sent message date: {previous} is after current date: {now}')
     timed = (now - previous).seconds
     if (now - previous).seconds <= config.get("DEFAULT_SLOWMODE_DELAY"):
-        print(f'This message is sent too soon. Current time: {now}, last sent message: {previous}. Current text_cooldown (slowmode_delay) is set to: {config.get("DEFAULT_SLOWMODE_DELAY")}.')
+        logger.info(f'This message is sent too soon. Current time: {now}, last sent message: {previous}. Current text_cooldown (slowmode_delay) is set to: {config.get("DEFAULT_SLOWMODE_DELAY")}.')
         return False
     else:
         return True
@@ -203,13 +185,13 @@ async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: 
     try:
         if not verifySlowMode(): #don't send the message if cannot verify the message is valid to send and is
             return
-        print("\n".join([u for u in curr_users]))
+        logger.debug("\n".join([u for u in curr_users]))
         newlineChar = '\n- ' #can't just keep this literally in an f string but using a variable works.
         await textChannel.send(f"{len(curr_users)} {config.get('DEFAULT_GREETING')} have joined {voiceChannel.name}:\n- {newlineChar.join([u for u in curr_users])}")
         SettingConfig.set("LAST_SENT_TIMESTAMP", (datetime.now().isoformat()))
-        print(f'Succefully sent the notification to {textChannel.name}')
+        logger.info(f'Succefully sent the notification to {textChannel.name}')
     except Exception as e:
-        print(f'Error: Failed to send the notification to text channel {textChannel.name}. Error message: {e}')
+        logger.error(f'Error: Failed to send the notification to text channel {textChannel.name}. Error message: {e}')
             
 async def print_imposter(guild: discord.guild, textChannel: discord.TextChannel):
     """_summary_
@@ -219,7 +201,5 @@ async def print_imposter(guild: discord.guild, textChannel: discord.TextChannel)
     """
     async for entry in guild.audit_logs(action=discord.AuditLogAction.member_disconnect):
         print(f'{entry.user} {entry.action} {entry.target}')
-#CODE EXECUTION STARTS HERE!!!!
-# client.run(Environs.TOKEN)
 
 bot.run(TOKEN)
