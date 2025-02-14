@@ -21,8 +21,9 @@ async def on_ready():
     Returns:
         None
     """
+    myCog = cmdCog(bot, logger)
+    bot.add_cog(myCog)
     logger.info(f'Success! {bot.user} has connected to Discord!')
-    bot.add_cog(cmdCog(bot, logger))
     cmdsCog = bot.get_cog('myCmds')
     logger.info(f'Successfully Added the commandsCog')
 @bot.command()
@@ -187,7 +188,7 @@ async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: 
             return
         logger.debug("\n".join([u for u in curr_users]))
         newlineChar = '\n- ' #can't just keep this literally in an f string but using a variable works.
-        await textChannel.send(f"{len(curr_users)} {config.get('DEFAULT_GREETING')} have joined {voiceChannel.name}:\n- {newlineChar.join([u for u in curr_users])}")
+        await textChannel.send(f"Hurry! there are {len(curr_users)} active members in {voiceChannel.name} right now:\n- {newlineChar.join([u for u in curr_users])}")
         SettingConfig.set("LAST_SENT_TIMESTAMP", (datetime.now().isoformat()))
         logger.info(f'Succefully sent the notification to {textChannel.name}')
     except Exception as e:

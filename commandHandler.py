@@ -15,6 +15,7 @@ class myCmds(commands.Cog):
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
+        # self.excl = commands.CommandTree(self.bot)
     @commands.group(invoke_without_command=True)
     async def set(self, ctx):
         """_summary_
@@ -78,7 +79,15 @@ class myCmds(commands.Cog):
         full_error = traceback.format_exception(error)
         await ctx.channel.send(f"**An exception has occurred!** (User {ctx.me} used /"
                     f"{ctx.command.qualified_name} with args {ctx.selected_options})\n```py\n{''.join(full_error)}```")
+    async def on_tree_error(interaction: discord.Interaction, error: commands.CommandError):
+        if isinstance(error, commands.CommandOnCooldown):
+            return await interaction.response.send_message(f"Command is currently on cooldown! Try again in **{error.retry_after:.2f}** seconds!")
+        elif isinstance(error, discord.app_commands.MissingPermissions):
+            return await interaction.response.send_message(f"You're missing permissions to use that")
+        else:
+            raise error
     
+
     async def isValidArg(self, ctx, arg) -> bool:
         """_summary_
         Checks if the argument is valid or missing. If missing it will alert the user in discord (by sending a message) and also logging the failure.
