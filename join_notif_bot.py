@@ -194,7 +194,7 @@ def verifySlowMode() -> bool:
     Returns:
         bool: whether the request to send valid or not
     """
-    if config.get("LAST_SENT_TIMESTAMP") == 0:
+    if not config.get("LAST_SENT_TIMESTAMP"):
         return True
     #timestamp must be positive
     now = datetime.now()
