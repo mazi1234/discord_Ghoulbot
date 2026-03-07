@@ -223,11 +223,10 @@ async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: 
         None
     """
     try:
-        if not verifySlowMode(): #don't send the message if cannot verify the message is valid to send and is
-            return
-        print("\n".join([u for u in curr_users]))
-        newlineChar = '\n- ' #can't just keep this literally in an f string but using a variable works.
-        await textChannel.send(f"{len(curr_users)} {config.get('DEFAULT_GREETING')} have joined {voiceChannel.name}:\n- {newlineChar.join([u for u in curr_users])}")
+        count = len(curr_users)
+        noun = "user" if count == 1 else "users"
+        verb = "has" if count == 1 else "have"
+        await textChannel.send(f"{count} {noun} {verb} joined {voiceChannel.name}")
         SettingConfig.set("LAST_SENT_TIMESTAMP", (datetime.now().isoformat()))
         print(f'Succefully sent the notification to {textChannel.name}')
     except Exception as e:
