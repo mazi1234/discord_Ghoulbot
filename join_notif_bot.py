@@ -68,7 +68,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
     #         print(f'Error getting kick log information: {e}')
     #     await print_imposter(guild, textChannel)
     #optimization idea later change from voice state update to only join vc state update (so it doesn't )   
-    if before.channel is not after.channel and after.channel is not None: #check if somebody joins any vc
+    if before.channel is None and after.channel is not None: #check if somebody joins from outside any vc
         vc_id = after.channel.id
         curr_vc = bot.get_channel(vc_id)
         presentUsers = []
