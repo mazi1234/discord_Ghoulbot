@@ -1,3 +1,5 @@
+# DEPRECATED: Commands have been merged into join_notif_bot.py.
+# Do not run this file separately. It is kept for reference only.
 import discord
 from discord.ext import commands
 from config import cmdConfig as config, cmdList as cmds, SettingConfig as envConfig

@@ -1,13 +1,13 @@
 import discord
 from datetime import datetime
 from discord.ext import commands
-from config import SettingConfig, configDict as config
+from config import SettingConfig, configDict as config, cmdList as cmds
 from env_vars import TOKEN
 #get the environment variables
 #declare constant values
 intents = discord.Intents.all() #need this to get correct info on users.
 # client = discord.Client(intents=intents)
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix=config.get("command_prefix", "!"), intents=intents)
 #this is STAGING
 @bot.event
 async def on_ready():
@@ -18,9 +18,31 @@ async def on_ready():
     """
     print(f'{bot.user} has connected to Discord!')
     print(bot.guilds)
-@bot.command()
-async def handleCommands(ctx, arg):
-    pass
+@bot.group(invoke_without_command=True)
+async def show(ctx):
+    await ctx.send(f'Unknown subcommand. Use {config.get("command_prefix", "!")}help for the manual.')
+
+@bot.group(invoke_without_command=True)
+async def set(ctx):
+    await ctx.send(f'Unknown subcommand. Use {config.get("command_prefix", "!")}help for the manual.')
+
+@set.command(name=cmds.get("set_min_users"))
+async def set_min_users(ctx, arg=None):
+    if await handleMissingArg(ctx, arg):
+        SettingConfig.set(cmds.get("set_min_users"), int(arg))
+        await ctx.send(f'MIN_NUM_USERS set to {arg}')
+
+@set.command(name=cmds.get("set_max_users"))
+async def set_max_users(ctx, arg=None):
+    if await handleMissingArg(ctx, arg):
+        SettingConfig.set(cmds.get("set_max_users"), int(arg))
+        await ctx.send(f'MAX_NUM_USERS set to {arg}')
+
+async def handleMissingArg(ctx, arg) -> bool:
+    if arg is None:
+        await ctx.send(f'Missing argument. Use {config.get("command_prefix", "!")}help for the manual.')
+        return False
+    return True
 @bot.event
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
     """_summary_
