@@ -226,7 +226,8 @@ async def send_notif_to_channel(textChannel: discord.TextChannel, voiceChannel: 
         count = len(curr_users)
         noun = "user" if count == 1 else "users"
         verb = "has" if count == 1 else "have"
-        await textChannel.send(f"{count} {noun} {verb} joined {voiceChannel.name}")
+        newlineChar = '\n- '
+        await textChannel.send(f"{count} {noun} {verb} joined {voiceChannel.name}:\n- {newlineChar.join(curr_users)}")
         SettingConfig.set("LAST_SENT_TIMESTAMP", (datetime.now().isoformat()))
         print(f'Succefully sent the notification to {textChannel.name}')
     except Exception as e:
